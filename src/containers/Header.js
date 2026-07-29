@@ -30,30 +30,13 @@ export default function Header() {
         zIndex: 40,
       }}
     >
-      {/* Left: Logo Placeholder */}
+      {/* Left: Logo */}
       <div style={{ display: "flex", alignItems: "center", width: "216px" }}>
         <img
-          src="/logo.svg"
-          alt="Company Logo"
-          onError={(e) => {
-            e.target.style.display = "none";
-          }}
-          style={{ height: "32px", maxWidth: "160px", objectFit: "contain" }}
+          src="/equinix-logo.png"
+          alt="EQUINIX Logo"
+          style={{ height: "32px", maxWidth: "200px", objectFit: "contain" }}
         />
-        {/* Fallback brand header if image not present */}
-        <div id="brand-fallback" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <div
-            style={{
-              width: "28px",
-              height: "14px",
-              background: "linear-gradient(90deg, #dc2626 0%, #ef4444 100%)",
-              borderRadius: "4px",
-            }}
-          />
-          <span style={{ fontWeight: "800", fontSize: "16px", letterSpacing: "2px", color: "#1f2937" }}>
-            EQUINIX
-          </span>
-        </div>
       </div>
 
       {/* Middle: Search Bar */}
