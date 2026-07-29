@@ -106,7 +106,7 @@ export default function Visitors() {
   const handleShowQRCode = async (visitor) => {
     setSelectedVisitor(visitor);
     const token = visitor.QrToken || visitor.token;
-    const TEMP_BROWSER_BASE = "http://192.168.20.10:8000/temp";
+    const TEMP_BROWSER_BASE = "http://192.168.20.10:7000/temp";
     const textToEncode = token
       ? `${TEMP_BROWSER_BASE}/?token=${token}`
       : JSON.stringify({
