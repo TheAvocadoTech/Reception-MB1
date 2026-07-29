@@ -2,6 +2,7 @@
   "name": "course-navigation-frontend",
   "version": "1.0.0",
   "private": true,
+  "homepage": "/reception",
   "dependencies": {
     "@heroicons/react": "^2.0.13",
     "axios": "^1.6.8",

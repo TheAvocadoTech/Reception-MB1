@@ -9,7 +9,7 @@ import Register from "./pages/Register";
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <Router basename="/reception">
         <Suspense fallback={
           <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <div className="animate-spin-custom" style={{ width: "40px", height: "40px", border: "4px solid #ef4444", borderTopColor: "transparent", borderRadius: "50%" }}></div>
