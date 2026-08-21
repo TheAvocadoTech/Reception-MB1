@@ -1,160 +1,87 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { NotificationManager } from "react-notifications";
 import companyService from "../services/company.service";
-import { X } from "lucide-react";
+import Pagination from "../components/Pagination";
+import { X, Building2, Edit2, Trash2 } from "lucide-react";
 
 export default function Companies() {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingCompany, setEditingCompany] = useState(null);
-  const [formData, setFormData] = useState({
-    companyName: "",
-    contactPerson: "",
-    email: "",
-    phone: "",
-    industry: "",
-    address: "",
-    website: "",
-  });
+  const [companyName, setCompanyName] = useState("");
   const [errors, setErrors] = useState({});
-  const [openMenuId, setOpenMenuId] = useState(null);
-  const menuRef = useRef(null);
 
-  useEffect(() => {
-    fetchCompanies();
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setOpenMenuId(null);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const fetchCompanies = async () => {
+  const fetchCompanies = useCallback(async () => {
     try {
       setLoading(true);
-      console.log("🏢 [COMPANIES UI] Fetching company list from SQL database...");
       const response = await companyService.getAll();
-      console.log("📥 [COMPANIES UI] Database response:", response);
       if (response && response.success) {
         setCompanies(response.companies || []);
       } else {
         setCompanies([]);
       }
     } catch (error) {
-      console.error("❌ [COMPANIES UI] Fetch error:", error);
+      console.error("❌ Fetch companies error:", error);
       setCompanies([]);
-      NotificationManager.error(error.message || "Failed to fetch companies from database", "Error");
+      NotificationManager.error(error.message || "Failed to fetch companies", "Error");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchCompanies();
+  }, [fetchCompanies]);
 
   const validateCompanyForm = () => {
     const newErrors = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^[0-9+\s\-()]{7,20}$/;
-    const urlRegex = /^(https?:\/\/)?([\w.-]+)\.([a-z]{2,})(:\d{1,5})?(\/.*)?$/i;
-
-    if (!formData.companyName.trim()) {
+    if (!companyName.trim()) {
       newErrors.companyName = "Company name is required";
-    } else if (formData.companyName.trim().length < 2) {
+    } else if (companyName.trim().length < 2) {
       newErrors.companyName = "Company name must be at least 2 characters";
     }
-
-    if (!formData.contactPerson.trim()) {
-      newErrors.contactPerson = "Contact person name is required";
-    } else if (formData.contactPerson.trim().length < 2) {
-      newErrors.contactPerson = "Contact person name must be at least 2 characters";
-    }
-
-    if (formData.email && formData.email.trim() !== "") {
-      if (!emailRegex.test(formData.email.trim())) {
-        newErrors.email = "Please enter a valid email address (e.g. info@company.com)";
-      }
-    }
-
-    if (formData.phone && formData.phone.trim() !== "") {
-      if (!phoneRegex.test(formData.phone.trim())) {
-        newErrors.phone = "Please enter a valid phone number (e.g. +1 9876543210)";
-      }
-    }
-
-    if (formData.website && formData.website.trim() !== "") {
-      if (!urlRegex.test(formData.website.trim())) {
-        newErrors.website = "Please enter a valid URL (e.g. https://company.com)";
-      }
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleOpenAddModal = () => {
     setEditingCompany(null);
-    setFormData({
-      companyName: "",
-      contactPerson: "",
-      email: "",
-      phone: "",
-      industry: "",
-      address: "",
-      website: "",
-    });
+    setCompanyName("");
     setErrors({});
     setShowModal(true);
   };
 
   const handleOpenEditModal = (company) => {
     setEditingCompany(company);
-    setFormData({
-      companyName: company.CompanyName || company.companyName || "",
-      contactPerson: company.ContactPerson || company.contactPerson || "",
-      email: company.Email || company.email || "",
-      phone: company.Phone || company.phone || "",
-      industry: company.Industry || company.industry || "",
-      address: company.Address || company.address || "",
-      website: company.Website || company.website || "",
-    });
+    setCompanyName(company.CompanyName || company.companyName || "");
     setErrors({});
     setShowModal(true);
-    setOpenMenuId(null);
   };
 
   const handleSaveCompany = async () => {
     if (!validateCompanyForm()) {
-      NotificationManager.warning("Please correct the form errors before saving", "Validation Failed");
+      NotificationManager.warning("Please enter a valid company name", "Validation Failed");
       return;
     }
 
     try {
       const payload = {
-        companyName: formData.companyName.trim(),
-        contactPerson: formData.contactPerson.trim(),
-        email: formData.email ? formData.email.trim() : null,
-        phone: formData.phone ? formData.phone.trim() : null,
-        industry: formData.industry ? formData.industry.trim() : null,
-        address: formData.address ? formData.address.trim() : null,
-        website: formData.website ? formData.website.trim() : null,
+        companyName: companyName.trim(),
       };
 
       if (editingCompany) {
         const id = editingCompany.CompanyID || editingCompany._id;
         const response = await companyService.update(id, payload);
         if (response && response.success) {
-          NotificationManager.success("Company updated in database successfully", "Success");
+          NotificationManager.success("Company updated successfully", "Success");
           fetchCompanies();
           handleCloseModal();
         }
       } else {
         const response = await companyService.create(payload);
         if (response && response.success) {
-          NotificationManager.success("Company saved to database successfully", "Success");
+          NotificationManager.success("Company added successfully", "Success");
           fetchCompanies();
           handleCloseModal();
         }
@@ -167,17 +94,17 @@ export default function Companies() {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingCompany(null);
+    setCompanyName("");
     setErrors({});
   };
 
   const handleDeleteCompany = async (id) => {
-    if (window.confirm("Are you sure you want to delete this company from database?")) {
+    if (window.confirm("Are you sure you want to delete this company?")) {
       try {
         const response = await companyService.delete(id);
         if (response && response.success) {
-          NotificationManager.success("Company deleted from database successfully", "Success");
+          NotificationManager.success("Company deleted successfully", "Success");
           fetchCompanies();
-          setOpenMenuId(null);
         }
       } catch (error) {
         NotificationManager.error(error.message || "Delete failed", "Error");
@@ -185,7 +112,16 @@ export default function Companies() {
     }
   };
 
-  if (loading) {
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
+  const totalPages = Math.ceil(companies.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentCompanies = companies.slice(indexOfFirstItem, indexOfLastItem);
+
+  if (loading && companies.length === 0) {
     return (
       <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div className="animate-spin-custom" style={{ width: "40px", height: "40px", border: "4px solid #dc2626", borderTopColor: "transparent", borderRadius: "50%" }}></div>
@@ -195,19 +131,24 @@ export default function Companies() {
 
   return (
     <div style={{ padding: "28px 32px", fontFamily: "Inter, sans-serif" }}>
-      {/* Page Title & Add Button Container */}
+      {/* Page Header */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           marginBottom: "24px",
-          width: "460px",
+          maxWidth: "680px",
         }}
       >
-        <h1 style={{ fontSize: "20px", fontWeight: "700", color: "#1f2937", margin: 0, letterSpacing: "-0.01em" }}>
-          Companies
-        </h1>
+        <div>
+          <h1 style={{ fontSize: "20px", fontWeight: "700", color: "#1f2937", margin: 0, letterSpacing: "-0.01em" }}>
+            Companies
+          </h1>
+          <p style={{ fontSize: "13px", color: "#6b7280", margin: "4px 0 0" }}>
+            Manage registered company directory
+          </p>
+        </div>
 
         <button
           onClick={handleOpenAddModal}
@@ -219,7 +160,7 @@ export default function Companies() {
             color: "#ffffff",
             border: "none",
             borderRadius: "10px",
-            padding: "8px 16px",
+            padding: "9px 18px",
             fontSize: "13.5px",
             fontWeight: "600",
             cursor: "pointer",
@@ -228,141 +169,188 @@ export default function Companies() {
           onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#111827")}
           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#1f2937")}
         >
-          Add
-          <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-            <rect x="2" y="2" width="6" height="6" rx="1.5" fill="white" />
-            <rect x="10" y="2" width="6" height="6" rx="1.5" fill="white" />
-            <rect x="2" y="10" width="6" height="6" rx="1.5" fill="white" />
-            <rect x="10" y="10" width="6" height="6" rx="1.5" fill="white" />
-          </svg>
+          Add Company +
         </button>
       </div>
 
-      {/* Companies Card Stack */}
-      <div style={{ width: "460px", display: "flex", flexDirection: "column", gap: "12px" }} ref={menuRef}>
-        {companies.length === 0 ? (
-          <div
-            style={{
-              backgroundColor: "#ffffff",
-              borderRadius: "16px",
-              border: "1px dashed #d1d5db",
-              padding: "36px 24px",
-              textAlign: "center",
-              color: "#9ca3af",
-              fontSize: "14px",
-            }}
-          >
-            No companies found in database. Click <strong>Add</strong> to create a company.
+      {/* Total Companies Card */}
+      <div style={{ marginBottom: "28px" }}>
+        <div
+          style={{
+            backgroundColor: "#ffffff",
+            borderRadius: "20px",
+            padding: "24px 28px",
+            width: "360px",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+            border: "1px solid #e9eaec",
+            boxSizing: "border-box",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+            <div
+              style={{
+                width: "38px",
+                height: "38px",
+                borderRadius: "50%",
+                backgroundColor: "#e0f2fe",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#0284c7",
+              }}
+            >
+              <Building2 size={20} />
+            </div>
+            <span style={{ fontSize: "15px", fontWeight: "600", color: "#1f2937" }}>
+              Total Companies
+            </span>
           </div>
-        ) : (
-          companies.map((company) => {
-            const companyId = company.CompanyID || company._id;
-            const compName = company.CompanyName || company.companyName;
 
-            return (
-              <div
-                key={companyId}
-                style={{
-                  backgroundColor: "#ffffff",
-                  borderRadius: "16px",
-                  border: "1px solid #e9eaec",
-                  padding: "18px 24px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
-                  position: "relative",
-                }}
-              >
-                <span style={{ fontSize: "14px", fontWeight: "500", color: "#1f2937" }}>
-                  {compName}
-                </span>
-
-                {/* Options Menu Kebab Button */}
-                <div style={{ position: "relative" }}>
-                  <button
-                    onClick={() => setOpenMenuId(openMenuId === companyId ? null : companyId)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: "4px 8px",
-                      color: "#9ca3af",
-                      fontSize: "18px",
-                      lineHeight: 1,
-                      borderRadius: "6px",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "#374151")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = "#9ca3af")}
-                    title="Options"
-                  >
-                    ⋮
-                  </button>
-
-                  {/* Popup Menu */}
-                  {openMenuId === companyId && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        right: 0,
-                        top: "calc(100% + 4px)",
-                        zIndex: 50,
-                        backgroundColor: "#ffffff",
-                        border: "1px solid #e5e7eb",
-                        borderRadius: "12px",
-                        boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                        padding: "6px",
-                        minWidth: "120px",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "4px",
-                      }}
-                    >
-                      <button
-                        onClick={() => handleOpenEditModal(company)}
-                        style={{
-                          width: "100%",
-                          padding: "8px 12px",
-                          borderRadius: "8px",
-                          border: "none",
-                          backgroundColor: "#f3f4f6",
-                          color: "#374151",
-                          fontSize: "13px",
-                          fontWeight: "500",
-                          cursor: "pointer",
-                          textAlign: "left",
-                        }}
-                      >
-                        Edit
-                      </button>
-
-                      <button
-                        onClick={() => handleDeleteCompany(companyId)}
-                        style={{
-                          width: "100%",
-                          padding: "8px 12px",
-                          borderRadius: "8px",
-                          border: "none",
-                          backgroundColor: "#fee2e2",
-                          color: "#ef4444",
-                          fontSize: "13px",
-                          fontWeight: "500",
-                          cursor: "pointer",
-                          textAlign: "left",
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })
-        )}
+          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+            <span style={{ fontSize: "40px", fontWeight: "800", color: "#1f2937", lineHeight: "1" }}>
+              {companies.length}
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Add / Edit Company Popup Modal */}
+      {/* Companies List Table Card */}
+      <div
+        style={{
+          backgroundColor: "#ffffff",
+          borderRadius: "20px",
+          padding: "24px 28px",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+          border: "1px solid #e9eaec",
+          maxWidth: "680px",
+        }}
+      >
+        {companies.length === 0 ? (
+          <div style={{ padding: "36px 24px", textAlign: "center", color: "#9ca3af", fontSize: "14px" }}>
+            No companies added yet. Click <strong>Add Company +</strong> to add one.
+          </div>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th
+                  style={{
+                    textAlign: "left",
+                    paddingBottom: "16px",
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    color: "#dc2626",
+                    borderBottom: "1px solid #f3f4f6",
+                    width: "15%",
+                  }}
+                >
+                  #
+                </th>
+                <th
+                  style={{
+                    textAlign: "left",
+                    paddingBottom: "16px",
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    color: "#dc2626",
+                    borderBottom: "1px solid #f3f4f6",
+                    width: "60%",
+                  }}
+                >
+                  Company Name
+                </th>
+                <th
+                  style={{
+                    textAlign: "right",
+                    paddingBottom: "16px",
+                    borderBottom: "1px solid #f3f4f6",
+                    width: "25%",
+                  }}
+                >
+                  Actions
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {currentCompanies.map((company, idx) => {
+                const id = company.CompanyID || company._id;
+                const name = company.CompanyName || company.companyName || "N/A";
+                const absoluteIndex = indexOfFirstItem + idx + 1;
+
+                return (
+                  <tr
+                    key={id || idx}
+                    style={{ borderBottom: idx === currentCompanies.length - 1 ? "none" : "1px solid #f9fafb" }}
+                  >
+                    {/* Index */}
+                    <td style={{ padding: "16px 0", fontSize: "13.5px", color: "#6b7280", fontWeight: "500" }}>
+                      {absoluteIndex}
+                    </td>
+
+                    {/* Company Name */}
+                    <td style={{ padding: "16px 0", fontSize: "14px", color: "#1f2937", fontWeight: "600" }}>
+                      {name}
+                    </td>
+
+                    {/* Action buttons */}
+                    <td style={{ padding: "16px 0", textAlign: "right" }}>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                        <button
+                          onClick={() => handleOpenEditModal(company)}
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "8px",
+                            backgroundColor: "#f3f4f6",
+                            border: "none",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            color: "#4b5563",
+                          }}
+                          title="Edit Company"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCompany(id)}
+                          style={{
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "8px",
+                            backgroundColor: "#fee2e2",
+                            border: "none",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            color: "#dc2626",
+                          }}
+                          title="Delete Company"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={companies.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={(page) => setCurrentPage(page)}
+        />
+      </div>
+
+      {/* Modal: Add/Edit Company */}
       {showModal && (
         <div
           style={{
@@ -384,17 +372,15 @@ export default function Companies() {
               backgroundColor: "#ffffff",
               borderRadius: "24px",
               padding: "32px 28px",
-              width: "440px",
-              maxHeight: "90vh",
-              overflowY: "auto",
+              width: "420px",
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
               boxSizing: "border-box",
             }}
           >
             {/* Modal Header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
-              <h3 style={{ fontSize: "20px", fontWeight: "700", color: "#ef4444", margin: 0 }}>
-                {editingCompany ? "Edit Company" : "Add Company"}
+              <h3 style={{ fontSize: "19px", fontWeight: "700", color: "#ef4444", margin: 0 }}>
+                {editingCompany ? "Edit Company" : "Add New Company"}
               </h3>
               <button
                 onClick={handleCloseModal}
@@ -415,287 +401,70 @@ export default function Companies() {
               </button>
             </div>
 
-            {/* Form Fields Stack */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-              {/* COMPANY NAME */}
-              <div>
-                <label style={{ fontSize: "11px", fontWeight: "600", color: "#9ca3af", letterSpacing: "0.05em", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
-                  COMPANY NAME *
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter company name"
-                  value={formData.companyName}
-                  onChange={(e) => {
-                    setFormData({ ...formData, companyName: e.target.value });
-                    if (errors.companyName) setErrors({ ...errors, companyName: null });
-                  }}
-                  style={{
-                    width: "100%",
-                    backgroundColor: errors.companyName ? "#fef2f2" : "#f9fafb",
-                    border: errors.companyName ? "1.5px solid #ef4444" : "1px solid #e5e7eb",
-                    borderRadius: "12px",
-                    padding: "12px 16px",
-                    fontSize: "13.5px",
-                    color: "#1f2937",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-                {errors.companyName && (
-                  <span style={{ fontSize: "11.5px", color: "#ef4444", fontWeight: "500", marginTop: "4px", display: "block" }}>
-                    {errors.companyName}
-                  </span>
-                )}
-              </div>
-
-              {/* CONTACT PERSON */}
-              <div>
-                <label style={{ fontSize: "11px", fontWeight: "600", color: "#9ca3af", letterSpacing: "0.05em", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
-                  CONTACT PERSON *
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter contact person name"
-                  value={formData.contactPerson}
-                  onChange={(e) => {
-                    setFormData({ ...formData, contactPerson: e.target.value });
-                    if (errors.contactPerson) setErrors({ ...errors, contactPerson: null });
-                  }}
-                  style={{
-                    width: "100%",
-                    backgroundColor: errors.contactPerson ? "#fef2f2" : "#f9fafb",
-                    border: errors.contactPerson ? "1.5px solid #ef4444" : "1px solid #e5e7eb",
-                    borderRadius: "12px",
-                    padding: "12px 16px",
-                    fontSize: "13.5px",
-                    color: "#1f2937",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-                {errors.contactPerson && (
-                  <span style={{ fontSize: "11.5px", color: "#ef4444", fontWeight: "500", marginTop: "4px", display: "block" }}>
-                    {errors.contactPerson}
-                  </span>
-                )}
-              </div>
-
-              {/* EMAIL */}
-              <div>
-                <label style={{ fontSize: "11px", fontWeight: "600", color: "#9ca3af", letterSpacing: "0.05em", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
-                  EMAIL
-                </label>
-                <input
-                  type="email"
-                  placeholder="Enter email address"
-                  value={formData.email}
-                  onChange={(e) => {
-                    setFormData({ ...formData, email: e.target.value });
-                    if (errors.email) setErrors({ ...errors, email: null });
-                  }}
-                  style={{
-                    width: "100%",
-                    backgroundColor: errors.email ? "#fef2f2" : "#f9fafb",
-                    border: errors.email ? "1.5px solid #ef4444" : "1px solid #e5e7eb",
-                    borderRadius: "12px",
-                    padding: "12px 16px",
-                    fontSize: "13.5px",
-                    color: "#1f2937",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-                {errors.email && (
-                  <span style={{ fontSize: "11.5px", color: "#ef4444", fontWeight: "500", marginTop: "4px", display: "block" }}>
-                    {errors.email}
-                  </span>
-                )}
-              </div>
-
-              {/* PHONE */}
-              <div>
-                <label style={{ fontSize: "11px", fontWeight: "600", color: "#9ca3af", letterSpacing: "0.05em", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
-                  PHONE
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter phone number"
-                  value={formData.phone}
-                  onChange={(e) => {
-                    setFormData({ ...formData, phone: e.target.value });
-                    if (errors.phone) setErrors({ ...errors, phone: null });
-                  }}
-                  style={{
-                    width: "100%",
-                    backgroundColor: errors.phone ? "#fef2f2" : "#f9fafb",
-                    border: errors.phone ? "1.5px solid #ef4444" : "1px solid #e5e7eb",
-                    borderRadius: "12px",
-                    padding: "12px 16px",
-                    fontSize: "13.5px",
-                    color: "#1f2937",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-                {errors.phone && (
-                  <span style={{ fontSize: "11.5px", color: "#ef4444", fontWeight: "500", marginTop: "4px", display: "block" }}>
-                    {errors.phone}
-                  </span>
-                )}
-              </div>
-
-              {/* INDUSTRY */}
-              <div>
-                <label style={{ fontSize: "11px", fontWeight: "600", color: "#9ca3af", letterSpacing: "0.05em", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
-                  INDUSTRY
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter industry"
-                  value={formData.industry}
-                  onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                  style={{
-                    width: "100%",
-                    backgroundColor: "#f9fafb",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "12px",
-                    padding: "12px 16px",
-                    fontSize: "13.5px",
-                    color: "#1f2937",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-
-                {/* Industry Selection Quick Chips */}
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, industry: "" })}
-                    style={{
-                      width: "24px",
-                      height: "24px",
-                      borderRadius: "50%",
-                      backgroundColor: "#f3f4f6",
-                      border: "none",
-                      cursor: "pointer",
-                    }}
-                    title="Clear"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, industry: "IT" })}
-                    style={{
-                      backgroundColor: formData.industry === "IT" ? "#ef4444" : "#f3f4f6",
-                      color: formData.industry === "IT" ? "#ffffff" : "#374151",
-                      border: "none",
-                      borderRadius: "16px",
-                      padding: "4px 14px",
-                      fontSize: "12px",
-                      fontWeight: "500",
-                      cursor: "pointer",
-                    }}
-                  >
-                    IT
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, industry: "manufacturing" })}
-                    style={{
-                      backgroundColor: formData.industry === "manufacturing" ? "#ef4444" : "#f3f4f6",
-                      color: formData.industry === "manufacturing" ? "#ffffff" : "#374151",
-                      border: "none",
-                      borderRadius: "16px",
-                      padding: "4px 14px",
-                      fontSize: "12px",
-                      fontWeight: "500",
-                      cursor: "pointer",
-                    }}
-                  >
-                    manufacturing
-                  </button>
-                </div>
-              </div>
-
-              {/* ADDRESS */}
-              <div>
-                <label style={{ fontSize: "11px", fontWeight: "600", color: "#9ca3af", letterSpacing: "0.05em", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
-                  ADDRESS
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter address"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  style={{
-                    width: "100%",
-                    backgroundColor: "#f9fafb",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "12px",
-                    padding: "12px 16px",
-                    fontSize: "13.5px",
-                    color: "#1f2937",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-
-              {/* WEBSITE */}
-              <div>
-                <label style={{ fontSize: "11px", fontWeight: "600", color: "#9ca3af", letterSpacing: "0.05em", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
-                  WEBSITE
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter website URL"
-                  value={formData.website}
-                  onChange={(e) => {
-                    setFormData({ ...formData, website: e.target.value });
-                    if (errors.website) setErrors({ ...errors, website: null });
-                  }}
-                  style={{
-                    width: "100%",
-                    backgroundColor: errors.website ? "#fef2f2" : "#f9fafb",
-                    border: errors.website ? "1.5px solid #ef4444" : "1px solid #e5e7eb",
-                    borderRadius: "12px",
-                    padding: "12px 16px",
-                    fontSize: "13.5px",
-                    color: "#1f2937",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-                {errors.website && (
-                  <span style={{ fontSize: "11.5px", color: "#ef4444", fontWeight: "500", marginTop: "4px", display: "block" }}>
-                    {errors.website}
-                  </span>
-                )}
-              </div>
+            {/* Input: Company Name */}
+            <div>
+              <label style={{ fontSize: "12.5px", fontWeight: "600", color: "#4b5563", display: "block", marginBottom: "6px" }}>
+                Company Name *
+              </label>
+              <input
+                type="text"
+                placeholder="Enter company name (e.g. Equinix, Microsoft)"
+                value={companyName}
+                onChange={(e) => {
+                  setCompanyName(e.target.value);
+                  if (errors.companyName) setErrors({ ...errors, companyName: null });
+                }}
+                style={{
+                  width: "100%",
+                  backgroundColor: errors.companyName ? "#fef2f2" : "#ffffff",
+                  border: errors.companyName ? "1.5px solid #ef4444" : "1px solid #e5e7eb",
+                  borderRadius: "12px",
+                  padding: "12px 16px",
+                  fontSize: "13.5px",
+                  color: "#1f2937",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+                autoFocus
+              />
+              {errors.companyName && (
+                <span style={{ fontSize: "11.5px", color: "#ef4444", fontWeight: "500", marginTop: "4px", display: "block" }}>
+                  {errors.companyName}
+                </span>
+              )}
             </div>
 
-            {/* Submit Button */}
-            <div style={{ marginTop: "28px" }}>
+            {/* Modal Action Buttons */}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "28px" }}>
+              <button
+                onClick={handleCloseModal}
+                style={{
+                  padding: "9px 18px",
+                  borderRadius: "10px",
+                  border: "1px solid #e5e7eb",
+                  backgroundColor: "#ffffff",
+                  color: "#4b5563",
+                  fontSize: "13.5px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
               <button
                 onClick={handleSaveCompany}
                 style={{
-                  width: "100%",
-                  padding: "14px",
-                  borderRadius: "14px",
+                  padding: "9px 20px",
+                  borderRadius: "10px",
                   border: "none",
                   backgroundColor: "#ef4444",
                   color: "#ffffff",
-                  fontSize: "15px",
-                  fontWeight: "700",
+                  fontSize: "13.5px",
+                  fontWeight: "600",
                   cursor: "pointer",
-                  boxShadow: "0 4px 12px rgba(239, 68, 68, 0.25)",
-                  transition: "background-color 0.15s",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#dc2626")}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#ef4444")}
               >
-                {editingCompany ? "Save Changes" : "Add"}
+                {editingCompany ? "Update Company" : "Save Company"}
               </button>
             </div>
           </div>

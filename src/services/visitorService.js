@@ -193,6 +193,14 @@ export const visitorService = {
     return await idManagementService.delete(id);
   },
 
+  assignTag: async (id, idNumber, company) => {
+    return await idManagementService.assignTag(id, idNumber, company);
+  },
+
+  endVisit: async (id) => {
+    return await idManagementService.endVisit(id);
+  },
+
   exportVisitorsCSV: (visitors) => {
     try {
       const headers = ["Name", "Phone", "Email", "Company", "ID Number", "Status", "Created At"];
