@@ -248,7 +248,7 @@ export default function Visitors() {
 
       // Generate & open QR code modal immediately
       const token = res.data?.token || res.data?.QrToken || visitor.QrToken;
-      const TEMP_BROWSER_BASE = "http://192.168.20.10:7000/temp";
+      const TEMP_BROWSER_BASE = process.env.REACT_APP_TEMP_BROWSER_URL || "http://192.168.20.10:3000/temp";
       const textToEncode = `${TEMP_BROWSER_BASE}/?token=${token}`;
 
       const qrData = await qrUtils.generateQRDataURL(textToEncode);
@@ -279,7 +279,7 @@ export default function Visitors() {
   const handleShowQRCodeModal = async (visitor) => {
     setSelectedVisitor(visitor);
     const token = visitor.QrToken || visitor.token;
-    const TEMP_BROWSER_BASE = "http://192.168.20.10:7000/temp";
+    const TEMP_BROWSER_BASE = process.env.REACT_APP_TEMP_BROWSER_URL || "http://192.168.20.10:3000/temp";
     const textToEncode = token
       ? `${TEMP_BROWSER_BASE}/?token=${token}`
       : JSON.stringify({
