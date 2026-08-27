@@ -279,17 +279,25 @@ export default function Visitors() {
   const handleShowQRCodeModal = async (visitor) => {
     setSelectedVisitor(visitor);
     const token = visitor.QrToken || visitor.token;
+    const tag = visitor.IdNumber || visitor.activeTagNumber;
     const TEMP_BROWSER_BASE = process.env.REACT_APP_TEMP_BROWSER_URL || "http://192.168.20.10:3000/temp";
-    const textToEncode = token
-      ? `${TEMP_BROWSER_BASE}/?token=${token}`
-      : JSON.stringify({
-          id: visitor.IdManagementID || visitor._id,
-          name: visitor.VisitorName || visitor.name,
-          idNumber: visitor.IdNumber || visitor.idNumber,
-        });
-    const qrData = await qrUtils.generateQRDataURL(textToEncode);
-    setSelectedQRCode(qrData);
-    setShowQRCodeModal(true);
+    
+    let textToEncode;
+    if (token) {
+      textToEncode = `${TEMP_BROWSER_BASE}/?token=${encodeURIComponent(token)}`;
+    } else if (tag) {
+      textToEncode = `${TEMP_BROWSER_BASE}/?tagCode=${encodeURIComponent(tag)}`;
+    } else {
+      textToEncode = `${TEMP_BROWSER_BASE}/?visitorId=${visitor.IdManagementID || visitor._id}`;
+    }
+
+    try {
+      const qrData = await qrUtils.generateQRDataURL(textToEncode);
+      setSelectedQRCode(qrData);
+      setShowQRCodeModal(true);
+    } catch (err) {
+      NotificationManager.error("Failed to generate QR code", "QR Error");
+    }
   };
 
   // Pagination State
